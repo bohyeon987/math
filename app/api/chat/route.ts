@@ -21,7 +21,8 @@ Politely decline non-math questions and guide them back to math.`,
     return result.toDataStreamResponse();
   } catch (error) {
     console.error('Error in chat route:', error);
-    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+    const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

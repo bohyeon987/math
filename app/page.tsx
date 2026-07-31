@@ -728,7 +728,7 @@ function GameContent() {
 }
 
 function ChatContent() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat();
+  const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -771,6 +771,13 @@ function ChatContent() {
               <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce"></span>
               <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
               <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+            </div>
+          </div>
+        )}
+        {error && (
+          <div className="flex justify-center my-4">
+            <div className="bg-red-50 text-red-600 px-4 py-3 rounded-2xl shadow-sm text-sm max-w-[80%] text-center border border-red-100">
+              <span className="font-bold">오류 발생:</span> {error.message || '응답을 받아오지 못했습니다. API 키나 네트워크 연결을 확인해주세요.'}
             </div>
           </div>
         )}
