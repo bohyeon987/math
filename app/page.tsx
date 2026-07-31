@@ -424,27 +424,11 @@ function QuizContent() {
   );
 }
 
-const mathProblems = [
-  { text: "lim(x→0) sin(x)/x", answer: 1 },
-  { text: "lim(x→2) (x²-4)/(x-2)", answer: 4 },
-  { text: "lim(x→∞) (2x+1)/(x-1)", answer: 2 },
-  { text: "f'(1) if f(x)=x²", answer: 2 },
-  { text: "f'(0) if f(x)=e^x", answer: 1 },
-  { text: "f'(2) if f(x)=x³/2", answer: 6 },
-  { text: "lim(x→1) (x³-1)/(x-1)", answer: 3 },
-  { text: "lim(x→∞) 3x/x", answer: 3 },
-  { text: "f'(0) if f(x)=sin(x)", answer: 1 },
-  { text: "f'(0) if f(x)=cos(x)", answer: 0 },
-  { text: "lim(x→0) (e^x-1)/x", answer: 1 },
-  { text: "lim(x→0) ln(1+x)/x", answer: 1 },
-];
-
 function GameContent() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
-  const [targetAnswer, setTargetAnswer] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -462,15 +446,10 @@ function GameContent() {
     let scoreCount = 0;
     let isGameRunning = true;
 
-    // Pick initial target
-    const allAnswers = Array.from(new Set(mathProblems.map(p => p.answer)));
-    let currentTarget = allAnswers[Math.floor(Math.random() * allAnswers.length)];
-    setTargetAnswer(currentTarget);
-
     const player = { x: canvas.width / 2 - 20, y: canvas.height - 60, width: 40, height: 40, speed: 6 };
     const bullets: { x: number, y: number, width: number, height: number, speed: number }[] = [];
     
-    type Enemy = { x: number, y: number, width: number, height: number, speed: number, type: number, text: string, answer: number };
+    type Enemy = { x: number, y: number, width: number, height: number, speed: number, type: number };
     const enemies: Enemy[] = [];
     
     const buildings = Array.from({ length: 15 }).map(() => ({
@@ -529,25 +508,13 @@ function GameContent() {
       // Spawn Enemies
       const spawnDelay = Math.max(800, 1500 - scoreCount * 10); 
       if (time - lastEnemyTime > spawnDelay) {
-        const isTarget = Math.random() > 0.4; // 60% chance for target answer
-        let selectedProblem;
-        if (isTarget) {
-          const targets = mathProblems.filter(p => p.answer === currentTarget);
-          selectedProblem = targets[Math.floor(Math.random() * targets.length)];
-        } else {
-          const nonTargets = mathProblems.filter(p => p.answer !== currentTarget);
-          selectedProblem = nonTargets[Math.floor(Math.random() * nonTargets.length)];
-        }
-
         enemies.push({ 
-          x: Math.random() * (canvas.width - 120) + 20, // keep away from edges
+          x: Math.random() * (canvas.width - 80) + 20, // keep away from edges
           y: -60, 
-          width: 90, // larger to fit text
-          height: 90, 
+          width: 60,
+          height: 60, 
           speed: 1.5 + Math.random() * 1.0 + (scoreCount * 0.02),
-          type: Math.floor(Math.random() * 3),
-          text: selectedProblem.text,
-          answer: selectedProblem.answer
+          type: Math.floor(Math.random() * 3)
         });
         lastEnemyTime = time;
       }
@@ -594,14 +561,6 @@ function GameContent() {
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Draw Math Text
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 12px monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        // split text to multiple lines if needed, for simplicity just print single line
-        ctx.fillText(enemy.text, centerX, centerY);
-
         // Check Collision with player
         if (
           player.x < enemy.x + enemy.width &&
@@ -625,23 +584,9 @@ function GameContent() {
             bullet.height + bullet.y > enemy.y
           ) {
             bullets.splice(j, 1);
-            
-            if (enemy.answer === currentTarget) {
-              enemies.splice(i, 1);
-              scoreCount += 10;
-              setScore(scoreCount);
-              
-              // Pick new target
-              currentTarget = allAnswers[Math.floor(Math.random() * allAnswers.length)];
-              setTargetAnswer(currentTarget);
-            } else {
-              // Penalty for wrong answer
-              scoreCount = Math.max(0, scoreCount - 10);
-              setScore(scoreCount);
-              // Small visual feedback (red flash)
-              ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
+            enemies.splice(i, 1);
+            scoreCount += 10;
+            setScore(scoreCount);
             break; // Bullet consumed
           }
         }
@@ -676,13 +621,12 @@ function GameContent() {
       <div className="flex flex-col items-center text-center space-y-4 mb-6">
         <div className="flex items-center justify-center gap-2 text-slate-400">
           <Gamepad2 className="w-6 h-6" />
-          <span className="font-semibold text-lg">매스 아케이드 (극한과 미분)</span>
+          <span className="font-semibold text-lg">클래식 슈팅 게임</span>
         </div>
         {!isPlaying && !isGameOver && (
           <p className="text-slate-500 max-w-sm">
             방향키(⬅️ ➡️)로 이동하세요!<br/>
-            <strong className="text-emerald-600">목표 정답</strong>과 일치하는 수식의 장애물을 파괴하세요.<br/>
-            오답을 쏘면 -10점 감점 패널티가 있습니다.
+            떨어지는 육각형 장애물을 파괴하여 점수를 획득하세요.
           </p>
         )}
       </div>
@@ -691,13 +635,6 @@ function GameContent() {
         <div className="absolute top-4 left-4 z-10 font-mono font-bold text-lg text-slate-800 bg-white/70 px-3 py-1 rounded-lg backdrop-blur-sm border border-slate-200 shadow-sm">
           SCORE: {score}
         </div>
-        
-        {isPlaying && targetAnswer !== null && (
-          <div className="absolute top-4 right-4 z-10 font-mono font-bold text-lg text-white bg-emerald-500 px-4 py-2 rounded-lg shadow-md flex flex-col items-center border-2 border-emerald-400">
-            <span className="text-xs opacity-90 uppercase tracking-wider mb-1">Target Answer</span>
-            <span className="text-2xl">{targetAnswer}</span>
-          </div>
-        )}
         
         <canvas 
           ref={canvasRef} 
