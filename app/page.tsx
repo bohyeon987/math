@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Play, Pause, RotateCcw, Clock } from "lucide-react";
+import { Plus, Play, Pause, RotateCcw, Clock, LineChart as LineChartIcon } from "lucide-react";
+import { evaluate } from "mathjs";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 function HomeContent() {
   return (
@@ -16,7 +18,7 @@ function HomeContent() {
         </p>
       </div>
 
-      <button className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 rounded-full font-medium shadow-md shadow-blue-500/20 transition-all hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0">
+      <button className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-4 rounded-full font-medium shadow-md shadow-emerald-500/20 transition-all hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0">
         <Plus className="w-5 h-5" />
         <span>기능 추가하기</span>
       </button>
@@ -66,7 +68,7 @@ function TimerContent() {
       </div>
 
       <div className="flex gap-4">
-        <button onClick={toggleTimer} className={`flex items-center justify-center w-16 h-16 rounded-full text-white shadow-lg transition-all hover:scale-105 active:scale-95 ${isRunning ? 'bg-amber-500 shadow-amber-500/20 hover:bg-amber-600' : 'bg-blue-500 shadow-blue-500/20 hover:bg-blue-600'}`}>
+        <button onClick={toggleTimer} className={`flex items-center justify-center w-16 h-16 rounded-full text-white shadow-lg transition-all hover:scale-105 active:scale-95 ${isRunning ? 'bg-amber-500 shadow-amber-500/20 hover:bg-amber-600' : 'bg-emerald-500 shadow-emerald-500/20 hover:bg-emerald-600'}`}>
           {isRunning ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
         </button>
         <button onClick={resetTimer} className="flex items-center justify-center w-16 h-16 rounded-full bg-white text-slate-600 shadow-sm border border-slate-100 transition-all hover:bg-slate-50 hover:scale-105 active:scale-95">
@@ -89,33 +91,130 @@ function TimerContent() {
   );
 }
 
+function GraphContent() {
+  const [expression, setExpression] = useState("sin(x)");
+  const [data, setData] = useState<any[]>([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    try {
+      const points = [];
+      for (let x = -10; x <= 10; x += 0.5) {
+        const y = evaluate(expression, { x });
+        if (typeof y === "number" && !isNaN(y)) {
+          // Keep y values within a reasonable bound for better rendering if it explodes
+          if (y > 100 || y < -100) continue;
+          points.push({ x: Number(x.toFixed(1)), y: Number(y.toFixed(3)) });
+        }
+      }
+      if (points.length === 0) {
+        setError("그래프를 그릴 수 없는 수식입니다.");
+      } else {
+        setData(points);
+        setError("");
+      }
+    } catch (err) {
+      setError("유효하지 않은 함수식입니다. (예: sin(x), x^2 + 2x)");
+    }
+  }, [expression]);
+
+  return (
+    <section className="max-w-4xl w-full flex flex-col items-center space-y-8 py-12 px-6 bg-white/40 backdrop-blur-md rounded-[2.5rem] shadow-lg border border-white/60">
+      <div className="space-y-2 text-center">
+        <div className="flex items-center justify-center gap-2 text-slate-400 mb-2">
+          <LineChartIcon className="w-5 h-5" />
+          <span className="font-medium">그래프</span>
+        </div>
+        <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">함수 그래프 시각화</h2>
+        <p className="text-slate-500">원하는 함수식을 입력하면 실시간으로 차트가 그려집니다.</p>
+      </div>
+
+      <div className="w-full max-w-md">
+        <div className="flex flex-col space-y-2">
+          <label className="text-sm font-semibold text-slate-700 ml-4">함수식 ( f(x) = )</label>
+          <input
+            type="text"
+            value={expression}
+            onChange={(e) => setExpression(e.target.value)}
+            placeholder="예: sin(x) 또는 x^2 + 3"
+            className="w-full px-6 py-4 rounded-full bg-white border border-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700 text-lg font-mono text-center"
+          />
+          {error && <p className="text-red-500 text-sm ml-4 mt-1">{error}</p>}
+        </div>
+      </div>
+
+      <div className="w-full h-[400px] bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex items-center justify-center">
+        {data.length > 0 && !error ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis 
+                dataKey="x" 
+                stroke="#94a3b8" 
+                tick={{ fill: '#64748b', fontSize: 12 }} 
+                minTickGap={20}
+                tickFormatter={(value) => `${value}`}
+              />
+              <YAxis 
+                stroke="#94a3b8" 
+                tick={{ fill: '#64748b', fontSize: 12 }} 
+              />
+              <Tooltip 
+                contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                labelFormatter={(label) => `x: ${label}`}
+                formatter={(value: any) => [`y: ${value}`, "Value"]}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="y" 
+                stroke="#10b981" 
+                strokeWidth={3} 
+                dot={false} 
+                activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }} 
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="text-slate-400 font-medium">그래프 영역</div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"home" | "timer">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "timer" | "graph">("home");
 
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full backdrop-blur-md bg-white/70 border-b border-gray-100/50 shadow-sm transition-all">
+      <header className="sticky top-0 z-50 w-full backdrop-blur-md bg-white/70 border-b border-emerald-100/50 shadow-sm transition-all">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-500 flex items-center justify-center shadow-sm">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center shadow-sm">
               <span className="text-white font-bold text-lg">수</span>
             </div>
             <span className="font-semibold text-lg text-slate-800">수학교실</span>
           </div>
           
-          <nav className="flex items-center bg-slate-100/50 p-1 rounded-full border border-slate-200/50">
+          <nav className="flex items-center bg-emerald-100/50 p-1 rounded-full border border-emerald-200/50">
             <button 
               onClick={() => setActiveTab("home")}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeTab === "home" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeTab === "home" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
             >
               홈
             </button>
             <button 
               onClick={() => setActiveTab("timer")}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeTab === "timer" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeTab === "timer" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
             >
               타이머
+            </button>
+            <button 
+              onClick={() => setActiveTab("graph")}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeTab === "graph" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            >
+              그래프
             </button>
           </nav>
         </div>
@@ -123,7 +222,9 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-center p-8">
-        {activeTab === "home" ? <HomeContent /> : <TimerContent />}
+        {activeTab === "home" && <HomeContent />}
+        {activeTab === "timer" && <TimerContent />}
+        {activeTab === "graph" && <GraphContent />}
       </main>
 
       {/* Footer */}
