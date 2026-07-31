@@ -8,22 +8,66 @@ import { supabase } from "@/lib/supabase";
 
 function HomeContent() {
   return (
-    <section className="max-w-3xl w-full flex flex-col items-center text-center space-y-8 py-20 px-6 bg-white/40 backdrop-blur-md rounded-[2.5rem] shadow-lg border border-white/60">
-      <div className="space-y-4">
+    <div className="w-full max-w-5xl flex flex-col space-y-12">
+      <div className="text-center space-y-4 mb-4">
         <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight">
-          나만의 교육용 웹앱 만들기
+          고등학교 수학 탐구
         </h1>
         <p className="text-lg text-slate-500 max-w-xl mx-auto">
-          학생들을 위한 맞춤형 학습 도구를 쉽고 직관적으로 만들어보세요. 
-          최고의 교육 환경은 선생님의 손끝에서 시작됩니다.
+          원하는 학습 섹션을 선택하여 심도 있는 수학 탐구를 시작하세요.
         </p>
       </div>
 
-      <button className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-4 rounded-full font-medium shadow-md shadow-emerald-500/20 transition-all hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0">
-        <Plus className="w-5 h-5" />
-        <span>기능 추가하기</span>
-      </button>
-    </section>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* 극한 섹션 */}
+        <section className="flex flex-col items-center text-center space-y-6 py-12 px-6 bg-gradient-to-b from-blue-50 to-white/40 backdrop-blur-md rounded-[2.5rem] shadow-lg border border-white/60 hover:-translate-y-2 transition-transform duration-300">
+          <div className="w-16 h-16 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <span className="font-bold text-2xl font-mono">lim</span>
+          </div>
+          <div className="space-y-2 flex-1">
+            <h2 className="text-2xl font-bold text-slate-800">극한</h2>
+            <p className="text-slate-500 text-sm">
+              함수와 수열의 극한 개념을 시각적으로 탐구하고 무한의 성질을 이해합니다.
+            </p>
+          </div>
+          <button className="w-full px-6 py-3 rounded-full bg-blue-100 text-blue-600 font-bold hover:bg-blue-200 transition-colors">
+            학습 시작하기
+          </button>
+        </section>
+
+        {/* 미분 섹션 */}
+        <section className="flex flex-col items-center text-center space-y-6 py-12 px-6 bg-gradient-to-b from-emerald-50 to-white/40 backdrop-blur-md rounded-[2.5rem] shadow-lg border border-white/60 hover:-translate-y-2 transition-transform duration-300">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30">
+            <span className="font-bold text-2xl font-mono">dx</span>
+          </div>
+          <div className="space-y-2 flex-1">
+            <h2 className="text-2xl font-bold text-slate-800">미분</h2>
+            <p className="text-slate-500 text-sm">
+              변화율과 접선의 기울기를 구하며, 함수의 개형과 극값을 분석합니다.
+            </p>
+          </div>
+          <button className="w-full px-6 py-3 rounded-full bg-emerald-100 text-emerald-600 font-bold hover:bg-emerald-200 transition-colors">
+            학습 시작하기
+          </button>
+        </section>
+
+        {/* 주제탐구 섹션 */}
+        <section className="flex flex-col items-center text-center space-y-6 py-12 px-6 bg-gradient-to-b from-purple-50 to-white/40 backdrop-blur-md rounded-[2.5rem] shadow-lg border border-white/60 hover:-translate-y-2 transition-transform duration-300">
+          <div className="w-16 h-16 rounded-2xl bg-purple-500 text-white flex items-center justify-center shadow-lg shadow-purple-500/30">
+            <BookOpen className="w-8 h-8" />
+          </div>
+          <div className="space-y-2 flex-1">
+            <h2 className="text-2xl font-bold text-slate-800">주제탐구</h2>
+            <p className="text-slate-500 text-sm">
+              실생활 응용 문제 및 심화 수학 주제를 스스로 설정하고 심도 있게 탐구합니다.
+            </p>
+          </div>
+          <button className="w-full px-6 py-3 rounded-full bg-purple-100 text-purple-600 font-bold hover:bg-purple-200 transition-colors">
+            학습 시작하기
+          </button>
+        </section>
+      </div>
+    </div>
   );
 }
 
