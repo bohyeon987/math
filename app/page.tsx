@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Play, Pause, RotateCcw, Clock, LineChart as LineChartIcon, BookOpen, User, Trophy } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Play, Pause, RotateCcw, Clock, LineChart as LineChartIcon, BookOpen, User, Trophy, Gamepad2 } from "lucide-react";
 import { evaluate } from "mathjs";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { supabase } from "@/lib/supabase";
@@ -379,8 +379,212 @@ function QuizContent() {
   );
 }
 
+function GameContent() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [score, setScore] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isGameOver, setIsGameOver] = useState(false);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set logical size
+    canvas.width = 400;
+    canvas.height = 500;
+
+    let animationFrameId: number;
+    let scoreCount = 0;
+    let isGameRunning = true;
+
+    const player = { x: canvas.width / 2 - 20, y: canvas.height - 60, width: 40, height: 40, speed: 6 };
+    const bullets: { x: number, y: number, width: number, height: number, speed: number }[] = [];
+    const enemies: { x: number, y: number, width: number, height: number, speed: number, type: number }[] = [];
+
+    const keys = { ArrowLeft: false, ArrowRight: false, Space: false };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+      if (e.code === 'ArrowLeft') keys.ArrowLeft = true;
+      if (e.code === 'ArrowRight') keys.ArrowRight = true;
+      if (e.code === 'Space') keys.Space = true;
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'ArrowLeft') keys.ArrowLeft = false;
+      if (e.code === 'ArrowRight') keys.ArrowRight = false;
+      if (e.code === 'Space') keys.Space = false;
+    };
+
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
+    window.addEventListener('keyup', handleKeyUp);
+
+    let lastShotTime = 0;
+    let lastEnemyTime = 0;
+
+    const render = (time: number) => {
+      if (!isGameRunning) return;
+
+      // Clear
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Player Movement
+      if (keys.ArrowLeft && player.x > 0) player.x -= player.speed;
+      if (keys.ArrowRight && player.x < canvas.width - player.width) player.x += player.speed;
+
+      // Shooting
+      if (keys.Space && time - lastShotTime > 200) {
+        bullets.push({ x: player.x + player.width / 2 - 4, y: player.y - 10, width: 8, height: 16, speed: 8 });
+        lastShotTime = time;
+      }
+
+      // Spawn Enemies
+      // spawn rate increases slightly with score
+      const spawnDelay = Math.max(400, 1000 - scoreCount * 5); 
+      if (time - lastEnemyTime > spawnDelay) {
+        enemies.push({ 
+          x: Math.random() * (canvas.width - 40), 
+          y: -40, 
+          width: 40, 
+          height: 40, 
+          speed: 2 + Math.random() * 2 + (scoreCount * 0.05),
+          type: Math.floor(Math.random() * 3)
+        });
+        lastEnemyTime = time;
+      }
+
+      // Draw Player (Spaceship-like polygon)
+      ctx.fillStyle = '#10b981'; // emerald-500
+      ctx.beginPath();
+      ctx.moveTo(player.x + player.width / 2, player.y);
+      ctx.lineTo(player.x + player.width, player.y + player.height);
+      ctx.lineTo(player.x, player.y + player.height);
+      ctx.fill();
+
+      // Update and Draw Bullets
+      ctx.fillStyle = '#f59e0b'; // amber-500
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const bullet = bullets[i];
+        bullet.y -= bullet.speed;
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+        if (bullet.y < 0) bullets.splice(i, 1);
+      }
+
+      // Update and Draw Enemies
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i];
+        enemy.y += enemy.speed;
+        
+        ctx.fillStyle = enemy.type === 0 ? '#ef4444' : enemy.type === 1 ? '#8b5cf6' : '#ec4899';
+        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+
+        // Check Collision with player
+        if (
+          player.x < enemy.x + enemy.width &&
+          player.x + player.width > enemy.x &&
+          player.y < enemy.y + enemy.height &&
+          player.height + player.y > enemy.y
+        ) {
+          isGameRunning = false;
+          setIsGameOver(true);
+          setIsPlaying(false);
+          return;
+        }
+
+        // Check Collision with bullets
+        for (let j = bullets.length - 1; j >= 0; j--) {
+          const bullet = bullets[j];
+          if (
+            bullet.x < enemy.x + enemy.width &&
+            bullet.x + bullet.width > enemy.x &&
+            bullet.y < enemy.y + enemy.height &&
+            bullet.height + bullet.y > enemy.y
+          ) {
+            enemies.splice(i, 1);
+            bullets.splice(j, 1);
+            scoreCount += 10;
+            setScore(scoreCount);
+            break;
+          }
+        }
+
+        // Remove if off screen
+        if (enemy && enemy.y > canvas.height) {
+          enemies.splice(i, 1);
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    animationFrameId = requestAnimationFrame(render);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      isGameRunning = false;
+    };
+  }, [isPlaying]);
+
+  const startGame = () => {
+    setScore(0);
+    setIsGameOver(false);
+    setIsPlaying(true);
+  };
+
+  return (
+    <section className="max-w-2xl w-full flex flex-col items-center py-12 px-6 bg-white/40 backdrop-blur-md rounded-[2.5rem] shadow-lg border border-white/60 min-h-[600px]">
+      <div className="flex flex-col items-center text-center space-y-4 mb-6">
+        <div className="flex items-center justify-center gap-2 text-slate-400">
+          <Gamepad2 className="w-6 h-6" />
+          <span className="font-semibold text-lg">슈팅 게임</span>
+        </div>
+        {!isPlaying && !isGameOver && (
+          <p className="text-slate-500 max-w-sm">
+            방향키(⬅️ ➡️)로 이동하고<br/>스페이스바(Space)로 장애물을 파괴하세요!
+          </p>
+        )}
+      </div>
+
+      <div className="relative">
+        <div className="absolute top-4 left-4 z-10 font-mono font-bold text-lg text-slate-800 bg-white/50 px-3 py-1 rounded-lg backdrop-blur-sm">
+          SCORE: {score}
+        </div>
+        
+        <canvas 
+          ref={canvasRef} 
+          className="bg-slate-900 rounded-3xl shadow-inner border-[6px] border-slate-800 w-[400px] h-[500px]"
+          width={400} 
+          height={500} 
+        />
+
+        {!isPlaying && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 rounded-3xl backdrop-blur-sm z-20">
+            {isGameOver && (
+              <div className="text-center mb-6">
+                <h3 className="text-4xl font-black text-red-500 mb-2">GAME OVER</h3>
+                <p className="text-2xl text-white font-mono">Final Score: {score}</p>
+              </div>
+            )}
+            <button 
+              onClick={startGame}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-10 py-4 rounded-full font-bold text-xl shadow-lg transition-all hover:scale-105 active:scale-95"
+            >
+              {isGameOver ? '다시 시작' : '게임 시작'}
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"home" | "timer" | "graph" | "quiz">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "timer" | "graph" | "quiz" | "game">("home");
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -419,6 +623,12 @@ export default function Home() {
             >
               퀴즈
             </button>
+            <button 
+              onClick={() => setActiveTab("game")}
+              className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeTab === "game" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            >
+              게임
+            </button>
           </nav>
         </div>
       </header>
@@ -429,6 +639,7 @@ export default function Home() {
         {activeTab === "timer" && <TimerContent />}
         {activeTab === "graph" && <GraphContent />}
         {activeTab === "quiz" && <QuizContent />}
+        {activeTab === "game" && <GameContent />}
       </main>
 
       {/* Footer */}
