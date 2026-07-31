@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Plus, Play, Pause, RotateCcw, Clock, LineChart as LineChartIcon, BookOpen, User, Trophy, Gamepad2, Bot, Send } from "lucide-react";
+import { Plus, Play, Pause, RotateCcw, Clock, LineChart as LineChartIcon, BookOpen, User, Trophy, Gamepad2, Bot, Send, Camera, X } from "lucide-react";
 import { evaluate } from "mathjs";
 import { useChat } from "ai/react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -730,6 +730,29 @@ function GameContent() {
 function ChatContent() {
   const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleChatSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if ((!input.trim() && !selectedImage) || isLoading) return;
+    
+    handleSubmit(e, {
+      data: selectedImage ? { image: selectedImage } : undefined
+    });
+    setSelectedImage(null);
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -748,30 +771,35 @@ function ChatContent() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
-        {messages.length === 0 && (
+        {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-4">
             <Bot className="w-16 h-16 opacity-20" />
-            <p className="text-sm">수학 문제나 개념에 대해 질문해보세요.</p>
+            <p>어떤 수학 문제든 물어보세요!</p>
           </div>
-        )}
-        {messages.map((m) => (
-          <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] px-5 py-3 ${
-              m.role === 'user' 
-                ? 'bg-emerald-500 text-white rounded-2xl rounded-br-sm shadow-md shadow-emerald-500/20' 
-                : 'bg-white text-slate-700 rounded-2xl rounded-bl-sm shadow-sm border border-slate-100'
-            }`}>
-              <div className="whitespace-pre-wrap text-sm leading-relaxed">{m.content}</div>
-            </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-white text-slate-500 rounded-2xl rounded-bl-sm px-5 py-3 shadow-sm border border-slate-100 flex items-center gap-2">
-              <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce"></span>
-              <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-              <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
-            </div>
+        ) : (
+          <div className="space-y-6">
+            {messages.map((m) => (
+              <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] rounded-2xl px-5 py-3.5 shadow-sm ${
+                  m.role === 'user' 
+                    ? 'bg-emerald-500 text-white rounded-br-sm' 
+                    : 'bg-white border border-slate-100 text-slate-700 rounded-bl-sm'
+                }`}>
+                  <div className="whitespace-pre-wrap leading-relaxed text-[15px]">
+                    {m.content}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-white text-slate-500 rounded-2xl rounded-bl-sm px-5 py-3 shadow-sm border border-slate-100 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce"></span>
+                  <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                  <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                </div>
+              </div>
+            )}
           </div>
         )}
         {error && (
@@ -784,18 +812,44 @@ function ChatContent() {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 bg-white/80 border-t border-slate-100">
-        <form onSubmit={handleSubmit} className="flex gap-2">
+      <div className="p-4 bg-white/80 border-t border-slate-100 flex flex-col gap-2">
+        {selectedImage && (
+          <div className="relative inline-block w-20 h-20 bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+            <img src={selectedImage} alt="첨부 이미지" className="w-full h-full object-cover" />
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-1 right-1 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 transition-colors"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+        <form onSubmit={handleChatSubmit} className="flex gap-2 items-center">
+          <input 
+            type="file" 
+            accept="image/*" 
+            className="hidden" 
+            ref={fileInputRef}
+            onChange={handleFileChange}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-12 h-12 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors shrink-0"
+            title="이미지 첨부"
+          >
+            <Camera className="w-5 h-5" />
+          </button>
           <input
             className="flex-1 bg-white border border-slate-200 rounded-full px-6 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all shadow-sm"
             value={input}
-            placeholder="궁금한 수학 질문을 입력하세요... (예: 극한이 뭐야?)"
+            placeholder="궁금한 수학 질문이나 수식 이미지를 첨부하세요..."
             onChange={handleInputChange}
           />
           <button 
             type="submit" 
-            disabled={isLoading || !input.trim()}
-            className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white hover:bg-emerald-600 disabled:opacity-50 disabled:hover:bg-emerald-500 transition-all shadow-md"
+            disabled={isLoading || (!input.trim() && !selectedImage)}
+            className="w-12 h-12 shrink-0 rounded-full bg-emerald-500 flex items-center justify-center text-white hover:bg-emerald-600 disabled:opacity-50 disabled:hover:bg-emerald-500 transition-all shadow-md"
           >
             <Send className="w-5 h-5 -ml-1" />
           </button>
