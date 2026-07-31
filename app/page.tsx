@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Plus, Play, Pause, RotateCcw, Clock, LineChart as LineChartIcon, BookOpen, User, Trophy, Gamepad2 } from "lucide-react";
+import { Plus, Play, Pause, RotateCcw, Clock, LineChart as LineChartIcon, BookOpen, User, Trophy, Gamepad2, Bot, Send } from "lucide-react";
 import { evaluate } from "mathjs";
+import { useChat } from "ai/react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { supabase } from "@/lib/supabase";
 
@@ -726,8 +727,79 @@ function GameContent() {
   );
 }
 
+function ChatContent() {
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  return (
+    <section className="max-w-3xl w-full flex flex-col bg-white/60 backdrop-blur-md rounded-[2.5rem] shadow-lg border border-white/80 h-[700px] overflow-hidden">
+      <div className="flex items-center gap-3 p-6 border-b border-white/60 bg-white/40">
+        <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
+          <Bot className="w-7 h-7" />
+        </div>
+        <div>
+          <h2 className="font-bold text-lg text-slate-800">AI 수학 멘토</h2>
+          <p className="text-xs text-slate-500">무엇이든 물어보세요! 친절하게 설명해 드릴게요.</p>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-4">
+            <Bot className="w-16 h-16 opacity-20" />
+            <p className="text-sm">수학 문제나 개념에 대해 질문해보세요.</p>
+          </div>
+        )}
+        {messages.map((m) => (
+          <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[80%] px-5 py-3 ${
+              m.role === 'user' 
+                ? 'bg-emerald-500 text-white rounded-2xl rounded-br-sm shadow-md shadow-emerald-500/20' 
+                : 'bg-white text-slate-700 rounded-2xl rounded-bl-sm shadow-sm border border-slate-100'
+            }`}>
+              <div className="whitespace-pre-wrap text-sm leading-relaxed">{m.content}</div>
+            </div>
+          </div>
+        ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-white text-slate-500 rounded-2xl rounded-bl-sm px-5 py-3 shadow-sm border border-slate-100 flex items-center gap-2">
+              <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce"></span>
+              <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+              <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="p-4 bg-white/80 border-t border-slate-100">
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <input
+            className="flex-1 bg-white border border-slate-200 rounded-full px-6 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all shadow-sm"
+            value={input}
+            placeholder="궁금한 수학 질문을 입력하세요... (예: 극한이 뭐야?)"
+            onChange={handleInputChange}
+          />
+          <button 
+            type="submit" 
+            disabled={isLoading || !input.trim()}
+            className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white hover:bg-emerald-600 disabled:opacity-50 disabled:hover:bg-emerald-500 transition-all shadow-md"
+          >
+            <Send className="w-5 h-5 -ml-1" />
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"home" | "timer" | "graph" | "quiz" | "game">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "timer" | "graph" | "quiz" | "game" | "chat">("home");
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -772,6 +844,12 @@ export default function Home() {
             >
               게임
             </button>
+            <button 
+              onClick={() => setActiveTab("chat")}
+              className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeTab === "chat" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            >
+              AI 멘토
+            </button>
           </nav>
         </div>
       </header>
@@ -783,6 +861,7 @@ export default function Home() {
         {activeTab === "graph" && <GraphContent />}
         {activeTab === "quiz" && <QuizContent />}
         {activeTab === "game" && <GameContent />}
+        {activeTab === "chat" && <ChatContent />}
       </main>
 
       {/* Footer */}
