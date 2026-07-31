@@ -404,19 +404,27 @@ function GameContent() {
     const player = { x: canvas.width / 2 - 20, y: canvas.height - 60, width: 40, height: 40, speed: 6 };
     const bullets: { x: number, y: number, width: number, height: number, speed: number }[] = [];
     const enemies: { x: number, y: number, width: number, height: number, speed: number, type: number }[] = [];
+    
+    // City background buildings
+    const buildings = Array.from({ length: 15 }).map(() => ({
+      x: Math.random() * 400,
+      y: Math.random() * 500,
+      w: 30 + Math.random() * 40,
+      h: 50 + Math.random() * 80,
+      color: ['#1e293b', '#334155', '#0f172a'][Math.floor(Math.random() * 3)],
+      speed: 1 + Math.random() * 2
+    }));
 
-    const keys = { ArrowLeft: false, ArrowRight: false, Space: false };
+    const keys = { ArrowLeft: false, ArrowRight: false };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+      if (['ArrowLeft', 'ArrowRight'].includes(e.key)) e.preventDefault();
       if (e.code === 'ArrowLeft') keys.ArrowLeft = true;
       if (e.code === 'ArrowRight') keys.ArrowRight = true;
-      if (e.code === 'Space') keys.Space = true;
     };
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'ArrowLeft') keys.ArrowLeft = false;
       if (e.code === 'ArrowRight') keys.ArrowRight = false;
-      if (e.code === 'Space') keys.Space = false;
     };
 
     window.addEventListener('keydown', handleKeyDown, { passive: false });
@@ -428,15 +436,26 @@ function GameContent() {
     const render = (time: number) => {
       if (!isGameRunning) return;
 
-      // Clear
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Draw city background (Night sky + Buildings)
+      ctx.fillStyle = '#020617'; // slate-950
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      buildings.forEach(b => {
+        b.y += b.speed;
+        if (b.y > canvas.height) {
+          b.y = -b.h;
+          b.x = Math.random() * canvas.width;
+        }
+        ctx.fillStyle = b.color;
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+      });
 
       // Player Movement
       if (keys.ArrowLeft && player.x > 0) player.x -= player.speed;
       if (keys.ArrowRight && player.x < canvas.width - player.width) player.x += player.speed;
 
-      // Shooting
-      if (keys.Space && time - lastShotTime > 200) {
+      // Automatic Shooting
+      if (time - lastShotTime > 150) {
         bullets.push({ x: player.x + player.width / 2 - 4, y: player.y - 10, width: 8, height: 16, speed: 8 });
         lastShotTime = time;
       }
@@ -477,9 +496,26 @@ function GameContent() {
       for (let i = enemies.length - 1; i >= 0; i--) {
         const enemy = enemies[i];
         enemy.y += enemy.speed;
+        const color = enemy.type === 0 ? '#ef4444' : enemy.type === 1 ? '#8b5cf6' : '#ec4899';
         
-        ctx.fillStyle = enemy.type === 0 ? '#ef4444' : enemy.type === 1 ? '#8b5cf6' : '#ec4899';
-        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+        // Draw Hexagon obstacle
+        ctx.beginPath();
+        const centerX = enemy.x + enemy.width / 2;
+        const centerY = enemy.y + enemy.height / 2;
+        const radius = enemy.width / 2;
+        for (let k = 0; k < 6; k++) {
+          const angle = (Math.PI / 3) * k;
+          const hx = centerX + radius * Math.cos(angle);
+          const hy = centerY + radius * Math.sin(angle);
+          if (k === 0) ctx.moveTo(hx, hy);
+          else ctx.lineTo(hx, hy);
+        }
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
 
         // Check Collision with player
         if (
@@ -545,7 +581,7 @@ function GameContent() {
         </div>
         {!isPlaying && !isGameOver && (
           <p className="text-slate-500 max-w-sm">
-            방향키(⬅️ ➡️)로 이동하고<br/>스페이스바(Space)로 장애물을 파괴하세요!
+            방향키(⬅️ ➡️)로 이동하세요!<br/>슈팅은 자동으로 발사됩니다.
           </p>
         )}
       </div>
